@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hành Trình Pháp Luật</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red-dark: #4a0d0d;
+            --red-bg: #1a0202;
+            --red-main: #B71C1C;
+            --gold: #FBC02D;
+            --gold-light: #FFD54F;
+            --cream: #FFF8F0;
+            --success: #2E7D32;
+            --error: #D32F2F;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: radial-gradient(circle at center, var(--red-dark) 0%, var(--red-bg) 100%);
+            color: var(--cream);
+            overflow: hidden; 
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        /* Biểu tượng chìm dưới nền */
+        .bg-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 70vh;
+            color: rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        h1, h2, h3, h4, h5 {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .screen {
+            display: none;
+            height: 100vh;
+            width: 100vw;
+            padding: 20px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Nút Fullscreen */
+        .fullscreen-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: 0.3s;
+        }
+        .fullscreen-btn:hover {
+            background: rgba(251, 192, 45, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Nút bấm chung */
+        .btn {
+            background: linear-gradient(45deg, var(--gold), var(--gold-light));
+            color: var(--red-bg);
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(251, 192, 45, 0.4);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-family: 'Montserrat', sans-serif;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(251, 192, 45, 0.7);
+        }
+
+        /* --- Màn hình Bắt Đầu --- */
+        .start-icon {
+            font-size: 6rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px var(--gold);
+        }
+        .title {
+            font-size: 6rem;
+            font-weight: 900;
+            color: var(--gold);
+            text-align: center;
+            text-shadow: 3px 3px 5px rgba(0,0,0,0.8), 0 0 20px var(--gold);
+            margin-bottom: 50px;
+            line-height: 1.1;
+            letter-spacing: 2px;
+        }
+
+        /* --- Màn hình Bản Đồ --- */
+        .map-header {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.6);
+            padding: 15px 30px;
+            border-radius: 15px;
+            border: 1px solid rgba(251, 192, 45, 0.4);
+            margin-bottom: 20px;
+            z-index: 5;
+            flex-shrink: 0;
+        }
+        .progress-text {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--gold);
+        }
+        
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            flex: 1;
+            max-height: 70vh; 
+            background: rgba(0,0,0,0.4);
+            border: 2px solid rgba(251, 192, 45, 0.3);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        .map-svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .station {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 2;
+            transform: translate(-50%, -50%);
+        }
+        .station-num {
+            font-size: 1.3rem;
+            font-weight: 900;
+        }
+        .station-name-tooltip {
+            position: absolute;
+            bottom: -35px;
+            background: rgba(0,0,0,0.9);
+            color: var(--gold);
+            padding: 5px 12px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            border: 1px solid var(--gold);
+        }
+        .station:hover .station-name-tooltip { opacity: 1; }
+
+        /* Trạng thái chưa làm (Được phép chọn tự do) */
+        .station.unlocked {
+            border-color: var(--gold);
+            background: rgba(251, 192, 45, 0.25);
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(251, 192, 45, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.15); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Trạng thái đã hoàn thành */
+        .station.completed {
+            border-color: var(--success);
+            background: rgba(46, 125, 50, 0.6);
+            cursor: not-allowed;
+        }
+        .station.completed::after {
+            content: '★';
+            color: var(--gold);
+            font-size: 1.8rem;
+            position: absolute;
+            top: -15px;
+            right: -10px;
+            text-shadow: 0 0 10px #000;
+        }
+
+        /* --- Màn hình Câu Hỏi --- */
+        .question-box {
+            background: var(--cream);
+            color: #222;
+            width: 100%;
+            max-width: 900px;
+            /* Căn chỉnh lại khoảng cách để không bao giờ bị tràn hay xuất hiện scrollbar */
+            padding: 20px 30px; 
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid var(--red-main);
+        }
+        .station-title {
+            color: var(--red-dark);
+            font-size: 1.5rem;
+            font-weight: 900;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .question-text {
+            font-size: 1.3rem; 
+            font-weight: 700;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            color: #111;
+            text-align: justify;
+        }
+        
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; 
+            margin-bottom: 15px;
+        }
+
+        .option-btn {
+            background: #fff;
+            border: 2px solid #ccc;
+            color: #222;
+            padding: 12px 20px; 
+            border-radius: 12px;
+            font-size: 1.1rem; 
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            line-height: 1.4;
+        }
+        .option-btn:hover {
+            background: #f8f8f8;
+            border-color: var(--red-main);
+            transform: translateX(5px);
+        }
+        .option-btn.correct {
+            background: var(--success) !important;
+            color: white !important;
+            border-color: var(--success) !important;
+            box-shadow: 0 0 20px rgba(46, 125, 50, 0.6);
+        }
+        .option-btn.wrong {
+            background: var(--error) !important;
+            color: white !important;
+            border-color: var(--error) !important;
+            animation: shake 0.4s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            padding: 10px 20px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-outline:hover {
+            background: rgba(251, 192, 45, 0.2);
+        }
+
+        /* --- Modal Thông báo LỚN (Đúng/Sai) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-overlay.active { display: flex; }
+        
+        .modal-box {
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            max-width: 90%;
+            width: 600px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: white;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        .modal-box h2 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            font-weight: 900;
+        }
+        .modal-box p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        /* Modal Đúng */
+        .success-box {
+            background: linear-gradient(135deg, var(--red-dark), var(--red-main));
+            border: 4px solid var(--gold);
+            box-shadow: 0 0 50px rgba(251, 192, 45, 0.5);
+        }
+        .success-box h2 { color: var(--gold); text-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .success-box .modal-icon { font-size: 5rem; margin-bottom: 10px; }
+
+        /* Modal Sai */
+        .error-box {
+            background: linear-gradient(135deg, #b71c1c, #7f0000);
+            border: 4px solid #ff5252;
+            box-shadow: 0 0 50px rgba(211, 47, 47, 0.6);
+        }
+        .error-box h2 { color: #ff5252; }
+        .error-box .modal-icon { font-size: 5rem; margin-bottom: 10px; animation: pulseError 1s infinite; }
+        @keyframes pulseError {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .error-btn {
+            background: #ff5252 !important;
+            color: white !important;
+            box-shadow: 0 5px 15px rgba(255, 82, 82, 0.4) !important;
+        }
+
+        /* --- Màn hình Chiến Thắng --- */
+        .victory-title {
+            font-size: 4.5rem;
+            font-weight: 900;
+            color: var(--gold);
+            text-align: center;
+            text-shadow: 0 0 30px var(--gold);
+            margin-bottom: 20px;
+            line-height: 1.2;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .final-quote {
+            font-size: 1.8rem; 
+            font-weight: 700; 
+            margin: 30px 0; 
+            background: rgba(0,0,0,0.6); 
+            padding: 25px 40px; 
+            border-radius: 15px; 
+            border: 2px solid var(--gold); 
+            max-width: 900px; 
+            text-align: center; 
+            line-height: 1.6; 
+            color: var(--gold); 
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        canvas#fireworks {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 90;
+        }
+
+        /* Responsive cho thiết bị nhỏ */
+        @media (max-width: 768px) {
+            .title { font-size: 3.5rem; }
+            .station { width: 50px; height: 50px; }
+            .station-num { font-size: 1rem; }
+            .question-box { padding: 15px 20px; }
+            .question-text { font-size: 1.1rem; margin-bottom: 10px; }
+            .option-btn { font-size: 0.95rem; padding: 10px 15px; }
+            .modal-box h2 { font-size: 2.2rem; }
+            .victory-title { font-size: 2.8rem; }
+            .final-quote { font-size: 1.3rem; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-watermark">⚖️</div>
+    <canvas id="fireworks"></canvas>
+    
+    <!-- Nút Phóng to toàn màn hình -->
+    <div class="fullscreen-btn" onclick="toggleFullScreen()" title="Toàn màn hình">
+        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+    </div>
+
+    <!-- MÀN HÌNH BẮT ĐẦU -->
+    <div id="screen-start" class="screen active">
+        <div class="start-icon">⚖️</div>
+        <h1 class="title">HÀNH TRÌNH<br>PHÁP LUẬT</h1>
+        <button class="btn" onclick="startGame()">BẮT ĐẦU HÀNH TRÌNH</button>
+    </div>
+
+    <!-- MÀN HÌNH BẢN ĐỒ -->
+    <div id="screen-map" class="screen">
+        <div class="map-header">
+            <h3>BẢN ĐỒ HÀNH TRÌNH</h3>
+            <div class="progress-text">Đã chinh phục: <span id="progress-count">0/15</span></div>
+        </div>
+        
+        <div class="map-wrapper">
+            <!-- Đường nối SVG -->
+            <svg class="map-svg" id="map-lines"></svg>
+            <div id="map-container">
+                <!-- Các trạm sinh ra bởi JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH CÂU HỎI -->
+    <div id="screen-question" class="screen">
+        <div class="question-box">
+            <div class="question-header">
+                <span class="station-title" id="q-station-name">Trạm 1</span>
+                <span style="color: #666; font-weight: 900; font-size: 1.2rem;">Câu <span id="q-number">1</span>/15</span>
+            </div>
+            <div class="question-text" id="q-text">Nội dung câu hỏi...</div>
+            <div class="options-grid" id="q-options">
+                <!-- Options -->
+            </div>
+            <div class="controls">
+                <button class="btn-outline" onclick="showScreen('screen-map')">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg> TRỞ VỀ BẢN ĐỒ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL THÔNG BÁO -->
+    <div id="feedback-modal" class="modal-overlay">
+        <div id="feedback-box" class="modal-box">
+            <div class="modal-icon" id="feedback-icon">🎉</div>
+            <h2 id="feedback-title">CHÚC MỪNG!</h2>
+            <p id="feedback-message">Bạn đã chinh phục thành công thử thách!</p>
+            <button id="feedback-btn" class="btn" onclick="closeFeedback()">TIẾP TỤC</button>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH HOÀN THÀNH -->
+    <div id="screen-victory" class="screen">
+        <div style="font-size: 6rem; margin-bottom: 20px;">👑</div>
+        <h1 class="victory-title">VINH DANH<br>NHÀ CHINH PHỤC<br> PHÁP LUẬT</h1>
+        <div class="final-quote">
+            "Hiểu biết pháp luật để tự bảo vệ mình, tôn trọng pháp luật để sống có trách nhiệm với cộng đồng"
+        </div>
+    </div>
+
+    <script>
+        // Fullscreen Logic
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Lỗi: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Dữ liệu 15 địa điểm
+        const stations = [
+            "Cổng Công lý", "Quảng trường Pháp luật", "Thư viện Tri thức", 
+            "Tòa nhà Quyền tác giả", "Thành phố An toàn số", "Pháo đài Bảo mật", 
+            "Ngã tư Đạo đức", "Khu phố Văn minh số", "Cây cầu Trách nhiệm", 
+            "Tòa án Công lý", "Trung tâm Bản quyền", "Khu vực An ninh mạng", 
+            "Quảng trường Công dân số", "Thành trì Chính nghĩa", "Vương miện Công lý"
+        ];
+
+        // Tọa độ % cho sơ đồ
+        const mapCoords = [
+            {x: 10, y: 15}, {x: 28, y: 25}, {x: 48, y: 15}, {x: 68, y: 25}, {x: 88, y: 15},
+            {x: 88, y: 45}, {x: 68, y: 55}, {x: 48, y: 45}, {x: 28, y: 55}, {x: 10, y: 45},
+            {x: 10, y: 75}, {x: 28, y: 85}, {x: 48, y: 75}, {x: 68, y: 85}, {x: 88, y: 75}
+        ];
+
+        const originalQuestionsData = [
+            {
+                q: "Hành vi nào sau đây có thể được xem là bạo lực học đường?",
+                options: [
+                    "A. Góp ý với bạn về bài tập chưa tốt.",
+                    "B. Không đồng ý với ý kiến của bạn trong giờ học.",
+                    "C. Đánh, xúc phạm, cô lập hoặc cố ý gây tổn hại cho bạn.",
+                    "D. Từ chối tham gia một hoạt động tập thể."
+                ],
+                answer: 2
+            },
+            {
+                q: "Một học sinh thường xuyên gọi bạn bằng biệt danh xúc phạm và cho rằng “chỉ đùa thôi”. Nhận định nào phù hợp nhất?",
+                options: [
+                    "A. Không có vấn đề nếu người nói không có ý xấu.",
+                    "B. Chỉ là bạo lực nếu xảy ra trước mặt nhiều người.",
+                    "C. Có thể gây tổn thương tinh thần và là hành vi cần được ngăn chặn.",
+                    "D. Chỉ đáng quan tâm khi người bị trêu phản ứng gay gắt."
+                ],
+                answer: 2
+            },
+            {
+                q: "Một nhóm học sinh cố tình loại một bạn khỏi các hoạt động chung, lập nhóm riêng để nói xấu và khiến bạn bị cô lập. Nhận định nào đúng?",
+                options: [
+                    "A. Không phải bạo lực vì không có hành vi đánh đập.",
+                    "B. Có thể gây tổn hại tinh thần và cần được quan tâm, ngăn chặn.",
+                    "C. Chỉ là mâu thuẫn cá nhân nên không cần can thiệp.",
+                    "D. Chỉ vi phạm khi xảy ra trong giờ học."
+                ],
+                answer: 1
+            },
+            {
+                q: "Một học sinh chỉnh sửa ảnh của bạn cùng lớp rồi đăng lên mạng để chế giễu. Hành vi này cần được nhìn nhận như thế nào?",
+                options: [
+                    "A. Là trò đùa bình thường nếu không có đánh nhau.",
+                    "B. Không có vấn đề nếu bài đăng được nhiều người thích.",
+                    "C. Có thể là hành vi bắt nạt trên không gian mạng, gây tổn hại đến danh dự và tinh thần của người khác.",
+                    "D. Chỉ đáng quan tâm khi người bị đăng ảnh yêu cầu xóa bài."
+                ],
+                answer: 2
+            },
+            {
+                q: "Theo khoản 1 Điều 22 Luật Giáo dục năm 2019, hành vi nào sau đây bị nghiêm cấm trong cơ sở giáo dục?",
+                options: [
+                    "A. Phê bình học sinh khi vi phạm nội quy.",
+                    "B. Xúc phạm nhân phẩm, danh dự hoặc xâm phạm thân thể người học.",
+                    "C. Nhắc nhở học sinh thực hiện nhiệm vụ học tập.",
+                    "D. Tổ chức hoạt động ngoại khóa cho học sinh."
+                ],
+                answer: 1
+            },
+            {
+                q: "Theo quy định pháp luật, người chưa thành niên thực hiện hành vi vi phạm pháp luật có phải chịu trách nhiệm pháp lý không?",
+                options: [
+                    "A. Không, vì chưa đủ 18 tuổi.",
+                    "B. Luôn phải chịu trách nhiệm hình sự như người thành niên.",
+                    "C. Việc xem xét trách nhiệm phụ thuộc vào độ tuổi, tính chất hành vi và các điều kiện do pháp luật quy định.",
+                    "D. Chỉ phải chịu trách nhiệm nếu nhà trường yêu cầu."
+                ],
+                answer: 2
+            },
+            {
+                q: "Khi một học sinh có hành vi bạo lực đối với bạn, nhận định nào sau đây đúng?",
+                options: [
+                    "A. Chỉ cần xin lỗi là không phải chịu bất kỳ trách nhiệm nào.",
+                    "B. Chỉ bị xử lý nếu hành vi xảy ra trong khuôn viên trường.",
+                    "C. Tùy tính chất, mức độ và các điều kiện luật định, người vi phạm có thể phải chịu kỷ luật hoặc trách nhiệm pháp lý tương ứng.",
+                    "D. Mọi hành vi xô xát đều đương nhiên cấu thành tội phạm."
+                ],
+                answer: 2
+            },
+            {
+                q: "Bạo lực học đường có thể gây ra hậu quả nào?",
+                options: [
+                    "A. Chỉ gây thương tích về thể chất.",
+                    "B. Có thể ảnh hưởng đến sức khỏe, tinh thần, kết quả học tập và môi trường học đường..",
+                    "C. Chỉ ảnh hưởng đến người trực tiếp bị đánh",
+                    "D. Không gây hậu quả đáng kể nếu xảy ra giữa bạn bè."
+                ],
+                answer: 1
+            },
+            {
+                q: "Khi phát hiện một bạn có dấu hiệu bị bạo lực học đường, trở nên sợ hãi và thu mình, em nên làm gì?",
+                options: [
+                    "A. Khuyên bạn tự giải quyết để tránh làm lớn chuyện.",
+                    "B. Hỏi chuyện bạn trước đám đông để tìm hiểu sự việc.",
+                    "C. Lắng nghe, động viên bạn và hỗ trợ bạn tìm đến người đáng tin cậy hoặc người có trách nhiệm.",
+                    "D. Kể lại sự việc cho các bạn khác để cùng bàn luận."
+                ],
+                answer: 2
+            },
+            {
+                q: "Khi chứng kiến một nhóm học sinh đang đánh bạn, cách xử lý nào phù hợp nhất?",
+                options: [
+                    "A. Trực tiếp lao vào can ngăn dù có nguy cơ bị thương.",
+                    "B. Đứng xem vì đây không phải việc của mình.",
+                    "C. Quay video đăng lên mạng để gây chú ý.",
+                    "D. Tìm sự hỗ trợ của giáo viên, người lớn hoặc người có trách nhiệm; hỗ trợ nạn nhân trong điều kiện an toàn."
+                ],
+                answer: 3
+            },
+            {
+                q: "Khi bị bạn đe dọa hoặc bắt nạt nhiều lần, em nên làm gì?",
+                options: [
+                    "A. Giữ im lặng vì sợ mọi chuyện nghiêm trọng hơn.",
+                    "B. Đánh trả để đối phương không bắt nạt nữa.",
+                    "C. Chia sẻ với người đáng tin cậy, báo giáo viên hoặc người có trách nhiệm và đề nghị hỗ trợ.",
+                    "D. Nghỉ học để tránh gặp người bắt nạt."
+                ],
+                answer: 2
+            },
+            {
+                q: "Khi phát hiện nội dung bắt nạt một bạn trong nhóm chat lớp, em nên làm gì?",
+                options: [
+                    "A. Không tiếp tay phát tán, động viên người bị bắt nạt và báo người có trách nhiệm khi cần.",
+                    "B. Thả biểu tượng cảm xúc để không bị tách khỏi nhóm.",
+                    "C. Chuyển tiếp tin nhắn sang nhóm khác để mọi người cùng xem.",
+                    "D. Tạo nội dung chế giễu người đã đăng bài."
+                ],
+                answer: 0
+            },
+            {
+                q: "Biện pháp nào giúp phòng ngừa bạo lực học đường hiệu quả?",
+                options: [
+                    "A. Chỉ xử lý khi vụ việc đã gây hậu quả nghiêm trọng.",
+                    "B. Tăng cường giáo dục kỹ năng ứng xử, phát hiện sớm mâu thuẫn và xây dựng kênh tiếp nhận thông tin an toàn.",
+                    "C. Để học sinh tự giải quyết mọi mâu thuẫn.",
+                    "D. Công khai danh tính người bị bắt nạt để cảnh báo những người khác."
+                ],
+                answer: 1
+            },
+            {
+                q: "Nhà trường nhận được thông tin về một vụ bạo lực học đường. Cách xử lý nào phù hợp nhất?",
+                options: [
+                    "A. Bỏ qua nếu học sinh cam kết không tái phạm.",
+                    "B. Chỉ yêu cầu các bên xin lỗi nhau rồi kết thúc vụ việc.",
+                    "C. Kịp thời xác minh, bảo đảm an toàn cho học sinh, phối hợp với gia đình và cơ quan có trách nhiệm khi cần thiết; xử lý theo quy định.",
+                    "D. Công khai toàn bộ thông tin và hình ảnh của học sinh liên quan lên mạng."
+                ],
+                answer: 2
+            },
+            {
+                q: "Nếu em có mâu thuẫn với một bạn và nhận ra mình đã có lời nói xúc phạm bạn, cách khắc phục nào phù hợp nhất?",
+                options: [
+                    "A. Cho rằng mình chỉ nóng giận nhất thời nên không cần làm gì.",
+                    "B. Xóa tin nhắn để tránh bị phát hiện.",
+                    "C. Thừa nhận hành vi, xin lỗi chân thành, chấm dứt việc xúc phạm và thực hiện các biện pháp khắc phục phù hợp.",
+                    "D. Yêu cầu bạn phải xin lỗi lại trước."
+                ],
+                answer: 2
+            }
+        ];
+
+        let shuffledQuestions = [];
+        let completedStations = new Set();
+        let currentPlayingIndex = -1;
+        let isAnswering = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            if (screenId === 'screen-map') renderMap();
+        }
+
+        function startGame() {
+            // Xáo trộn ngẫu nhiên mảng câu hỏi
+            shuffledQuestions = JSON.parse(JSON.stringify(originalQuestionsData));
+            for (let i = shuffledQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
+            }
+            completedStations.clear();
+            showScreen('screen-map');
+        }
+
+        function renderMap() {
+            const container = document.getElementById('map-container');
+            const linesSvg = document.getElementById('map-lines');
+            container.innerHTML = '';
+            linesSvg.innerHTML = '';
+            document.getElementById('progress-count').innerText = `${completedStations.size}/15`;
+
+            // Vẽ đường nối
+            for(let i=0; i<mapCoords.length - 1; i++) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', `${mapCoords[i].x}%`);
+                line.setAttribute('y1', `${mapCoords[i].y}%`);
+                line.setAttribute('x2', `${mapCoords[i+1].x}%`);
+                line.setAttribute('y2', `${mapCoords[i+1].y}%`);
+                line.setAttribute('stroke', 'rgba(251, 192, 45, 0.5)');
+                line.setAttribute('stroke-width', '4');
+                line.setAttribute('stroke-dasharray', '10,10');
+                linesSvg.appendChild(line);
+            }
+
+            // Vẽ các trạm 
+            stations.forEach((station, index) => {
+                const coord = mapCoords[index];
+                const el = document.createElement('div');
+                el.className = 'station';
+                el.style.left = `${coord.x}%`;
+                el.style.top = `${coord.y}%`;
+                
+                let icon = '⭐';
+                
+                if (completedStations.has(index)) {
+                    el.classList.add('completed');
+                    icon = '✓';
+                } else {
+                    el.classList.add('unlocked');
+                    el.onclick = () => openQuestion(index);
+                }
+
+                el.innerHTML = `
+                    <div class="station-num">${index + 1}</div>
+                    <div style="font-size:1.2rem">${icon}</div>
+                    <div class="station-name-tooltip">${station}</div>
+                `;
+
+                container.appendChild(el);
+            });
+        }
+
+        function openQuestion(index) {
+            currentPlayingIndex = index;
+            const qData = shuffledQuestions[index];
+            
+            document.getElementById('q-station-name').innerText = `Trạm ${index + 1}: ${stations[index]}`;
+            document.getElementById('q-number').innerText = index + 1;
+            document.getElementById('q-text').innerText = qData.q;
+            
+            const optionsContainer = document.getElementById('q-options');
+            optionsContainer.innerHTML = '';
+            
+            qData.options.forEach((opt, optIndex) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(optIndex, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            showScreen('screen-question');
+        }
+
+        function checkAnswer(optIndex, btnEl) {
+            if(isAnswering) return;
+            isAnswering = true;
+            
+            const correctIndex = shuffledQuestions[currentPlayingIndex].answer;
+            
+            if (optIndex === correctIndex) {
+                btnEl.classList.add('correct');
+                createFireworks(100); 
+                setTimeout(() => {
+                    showFeedback(true);
+                    isAnswering = false;
+                }, 500);
+            } else {
+                btnEl.classList.add('wrong');
+                showFeedback(false);
+                setTimeout(() => {
+                    btnEl.classList.remove('wrong');
+                    isAnswering = false;
+                }, 1000);
+            }
+        }
+
+        function showFeedback(isCorrect) {
+            const modal = document.getElementById('feedback-modal');
+            const box = document.getElementById('feedback-box');
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-message');
+            const btn = document.getElementById('feedback-btn');
+
+            if (isCorrect) {
+                box.className = 'modal-box success-box';
+                btn.className = 'btn';
+                icon.innerText = '🎉';
+                title.innerText = 'CHÚC MỪNG!';
+                msg.innerText = 'Bạn đã chinh phục thành công thử thách này!';
+                btn.setAttribute('onclick', 'nextFromFeedback()');
+            } else {
+                box.className = 'modal-box error-box';
+                btn.className = 'btn error-btn';
+                icon.innerText = '❌';
+                title.innerText = 'CHƯA CHÍNH XÁC!';
+                msg.innerText = 'Hãy đọc thật kỹ câu hỏi và thử lại nhé!';
+                btn.setAttribute('onclick', 'closeFeedback()');
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeFeedback() {
+            document.getElementById('feedback-modal').classList.remove('active');
+        }
+
+        function nextFromFeedback() {
+            closeFeedback();
+            completedStations.add(currentPlayingIndex);
+            
+            if (completedStations.size >= 15) {
+                showScreen('screen-victory');
+                startContinuousFireworks();
+            } else {
+                showScreen('screen-map');
+            }
+        }
+
+        // --- HỆ THỐNG PHÁO HOA ---
+        const canvas = document.getElementById('fireworks');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let fireworksLoop;
+        let continuousMode = false;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 8 + 3;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.015 + 0.01;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.08; 
+                this.life -= this.decay;
+            }
+            draw() {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 4, 0, Math.PI * 2); 
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        const colors = ['#FBC02D', '#FF5252', '#FFFFFF', '#69F0AE', '#448AFF', '#FF4081'];
+
+        function createFireworks(count, isRandom = false) {
+            const x = isRandom ? Math.random() * canvas.width : canvas.width / 2;
+            const y = isRandom ? Math.random() * (canvas.height/2) : canvas.height / 2;
+            for (let i = 0; i < count; i++) {
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                particles.push(new Particle(x, y, color));
+            }
+            if (!fireworksLoop) animateFireworks();
+        }
+
+        function animateFireworks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            
+            if (continuousMode && Math.random() < 0.08) {
+                createFireworks(40, true);
+            }
+
+            if (particles.length > 0 || continuousMode) {
+                fireworksLoop = requestAnimationFrame(animateFireworks);
+            } else {
+                fireworksLoop = null;
+            }
+        }
+
+        function startContinuousFireworks() {
+            continuousMode = true;
+            createFireworks(80, true);
+            setTimeout(() => createFireworks(80, true), 300);
+            setTimeout(() => createFireworks(100, true), 600);
+        }
+    </script>
+</body>
+</html>
